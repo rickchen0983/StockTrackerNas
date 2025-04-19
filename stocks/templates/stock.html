@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Data for {{ symbol }}</title>
+</head>
+
+<body>
+    <h1>Stock Data for {{ symbol }}</h1>
+    {% if stock_data %}
+    <div>{{ stock_data|safe }}</div>
+    {% else %}
+    <p>{{ error }}</p>
+    {% endif %}
+    <a href="/">Back to Home</a>
+</body>
+
+</html>

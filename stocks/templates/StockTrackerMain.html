@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票查詢系統</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- 增加一些基本的樣式來使網頁看起來更美觀 -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 32px;
+            /* 增大標題字體 */
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1600px;
+            /* 增加最大寬度 */
+            padding: 40px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin: 0 20px;
+        }
+
+        .form-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        input[type="text"],
+        select {
+            padding: 15px;
+            font-size: 18px;
+            /* 增大字體和內邊距 */
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            width: 250px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #error {
+            color: red;
+            text-align: center;
+            margin-top: 30px;
+            font-size: 18px;
+            /* 增大錯誤訊息字體 */
+        }
+
+        #chart {
+            width: 100%;
+            height: 500px;
+            /* 增大圖表顯示區域 */
+            margin-top: 40px;
+        }
+
+        /* 響應式設計：當屏幕寬度小於 600px 時，調整表單的顯示方式 */
+        @media (max-width: 600px) {
+            .form-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            input[type="text"],
+            select {
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 28px;
+                /* 小屏幕下減小標題字體 */
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>股票查詢系統</h1>
+
+        <div class="form-container">
+            <!-- 股票代碼輸入框和選擇間隔 -->
+            <input type="text" id="symbolInput" placeholder="輸入股票代碼">
+            <select id="intervalSelect">
+                <option value="1d">日線</option>
+                <option value="1wk">周線</option>
+                <option value="1mo">月線</option>
+            </select>
+            <button onclick="fetchStockData()">查詢</button>
+        </div>
+
+        <!-- 顯示錯誤訊息 -->
+        <div id="error"></div>
+
+        <!-- 顯示圖表 -->
+        <div id="chart"></div>
+    </div>
+
+    <script>
+        function fetchStockData() {
+            const symbol = document.getElementById("symbolInput").value.trim();
+            const interval = document.getElementById("intervalSelect").value;
+            if (!symbol) {
+                document.getElementById("error").innerText = "請輸入股票代號或名稱";
+                return;
+            }
+            document.getElementById("error").innerText = "";
+
+            fetch(`/api/stock_data/?symbol=${encodeURIComponent(symbol)}&interval=${interval}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.error) {
+                        document.getElementById("error").innerText = data.error;
+                        document.getElementById("chart").innerHTML = "";
+                    } else {
+                        plotChart(data, symbol, interval);
+                    }
+                })
+                .catch((err) => {
+                    document.getElementById("error").innerText = "查詢失敗，請稍後再試";
+                    console.error(err);
+                });
+        }
+
+        function plotChart(data, symbol, interval) {
+            const candlestickTrace = {
+                x: data.dates,
+                open: data.open,
+                high: data.high,
+                low: data.low,
+                close: data.close,
+                type: "candlestick",
+                name: "K 線",
+                increasing: { line: { color: "green" } },
+                decreasing: { line: { color: "red" } },
+            };
+
+            const ma5Trace = {
+                x: data.dates,
+                y: data.ma5,
+                type: "scatter",
+                mode: "lines",
+                name: "MA5",
+                line: { color: "blue" }
+            };
+
+            const ma20Trace = {
+                x: data.dates,
+                y: data.ma20,
+                type: "scatter",
+                mode: "lines",
+                name: "MA20",
+                line: { color: "orange" }
+            };
+
+            const ma60Trace = {
+                x: data.dates,
+                y: data.ma60,
+                type: "scatter",
+                mode: "lines",
+                name: "MA60",
+                line: { color: "purple" }
+            };
+
+            const layout = {
+                title: `${symbol} 的 K 線圖（${interval}）`,
+                xaxis: {
+                    title: "日期",
+                    rangeslider: { visible: false },
+                },
+                yaxis: { title: "價格" },
+                plot_bgcolor: "#f7f7f7",
+                paper_bgcolor: "#f4f7f6",
+                font: { family: "Arial, sans-serif", size: 16 },  /* 增大字體 */
+            };
+
+            const config = {
+                responsive: true,
+                scrollZoom: true,
+            };
+
+            Plotly.newPlot("chart", [candlestickTrace, ma5Trace, ma20Trace, ma60Trace], layout, config);
+        }
+    </script>
+
+</body>
+
+</html>
